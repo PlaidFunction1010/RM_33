@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方紋衫數學 2.0 | RM_33 專業戰情室</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root { 
+            --sidebar-width: 320px; 
+            --primary-bg: #1a1a1a;
+            --accent-color: #3498db; 
+            --card-bg: #ffffff;
+            --text-main: #2d3436;
+        }
+
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            margin: 0; display: flex; height: 100vh; background-color: #f4f7f6;
+            -webkit-user-select: none; user-select: none;
+        }
+
+        /* 側邊欄升級：摺疊選單 */
+        #sidebar { 
+            width: var(--sidebar-width); background: var(--primary-bg); color: white; 
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .sidebar-header { padding: 30px; text-align: center; border-bottom: 1px solid #333; cursor: pointer; }
+        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: var(--accent-color); }
+
+        .unit-list { flex-grow: 1; overflow-y: auto; padding: 10px 0; }
+        .unit-group { border-bottom: 1px solid #222; }
+        .unit-title { 
+            padding: 15px 25px; cursor: pointer; display: flex; justify-content: space-between; 
+            transition: 0.3s; color: #eee; font-weight: 500;
+        }
+        .unit-title:hover { background: #222; }
+        .sub-item-list { display: none; background: #000; padding: 5px 0; }
+        .sub-item { padding: 10px 40px; font-size: 0.9rem; color: #888; cursor: pointer; transition: 0.2s; }
+        .sub-item:hover { color: var(--accent-color); background: #111; }
+
+        /* 主內容區 */
+        #main-content { flex-grow: 1; padding: 40px; overflow-y: auto; position: relative; }
+        .home-section { max-width: 900px; margin: 0 auto; }
+        .section-title { font-size: 1.5rem; margin-bottom: 20px; border-left: 5px solid var(--accent-color); padding-left: 15px; }
+
+        .card { background: var(--card-bg); padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .problem-img { width: 100%; max-height: 400px; object-fit: contain; margin-bottom: 20px; border-radius: 10px; }
+        
+        /* 遊戲化：專注模式 UI */
+        #focus-timer-box { 
+            position: fixed; top: 20px; right: 20px; background: #fff; padding: 10px 20px; 
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px;
+            z-index: 1000; display: none;
+        }
+        .btn-focus { background: var(--accent-color); color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+
+        /* 答題按鈕 */
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 20px 0; }
+        .opt-btn { padding: 15px; border: 1px solid #ddd; border-radius: 10px; background: #fff; cursor: pointer; text-align: left; transition: 0.2s; }
+        .opt-btn:hover { border-color: var(--accent-color); background: #f0f7ff; }
+        .opt-btn.correct { background: #27ae60 !important; color: white; }
+        .opt-btn.wrong { background: #e74c3c !important; color: white; }
+
+        #visitor-counter { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 30px; color: white; font-size: 12px; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="focus-timer-box">
+        ⏳ <span id="timer-display">25:00</span>
+        <button class="btn-focus" id="focus-ctrl" onclick="toggleFocus()">開始專注</button>
+    </div>
+
+    <nav id="sidebar">
+        <div class="sidebar-header" onclick="showHome()">
+            <h2>方紋衫數學 2.0</h2>
+            <small style="opacity:0.5;">RM_33 系統</small>
+        </div>
+        <div class="unit-list" id="unit-list">
+            </div>
+        <div style="padding:20px; border-top:1px solid #333;">
+            <button class="btn-focus" style="width:100%" onclick="document.getElementById('focus-timer-box').style.display='flex'">開啟專注模式</button>
+        </div>
+    </nav>
+
+    <main id="main-content">
+        <div id="display-area">
+            </div>
+    </main>
+
+    <div id="visitor-counter">
+        🚀 戰情室流量：
+        <img src="https://hits.dwyl.com/plaidfunction1010/RM_33.svg" alt="Hits" style="vertical-align: middle;">
+    </div>
+
+    <script>
+        const sheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTA19q_bXVl7XZPAf4ImCJEWZfs_zJwFuSFsBmAf3n-_I_zrkb8cuzyxMWrUJhpBB7xpnQ9baoEDh1U/pub?output=csv'; 
+        let allData = [];
+
+        async function init() {
+            Papa.parse(sheetCsvUrl, {
+                download: true, header: true,
+                complete: function(results) {
+                    // 過濾無效資料
+                    allData = results.data.filter(r => r['單元名稱']);
+                    
+                    // 自動排序邏輯：按單元數字排序
+                    allData.sort((a, b) => {
+                        const numA = parseInt(a['單元名稱'].match(/\d+/)) || 0;
+                        const numB = parseInt(b['單元名稱'].match(/\d+/)) || 0;
+                        return numA - numB;
+                    });
+
+                    renderSidebar();
+                    showHome();
+                }
+            });
+        }
+
+        // 渲染摺疊選單
+        function renderSidebar() {
+            const container = document.getElementById('unit-list');
+            const unitMap = {};
+
+            allData.forEach(p => {
+                const u = p['單元名稱'];
+                const sub = p['主題'] || '一般練習';
+                if (!unitMap[u]) unitMap[u] = new Set();
+                unitMap[u].add(sub);
+            });
+
+            container.innerHTML = Object.keys(unitMap).map(unit => `
+                <div class="unit-group">
+                    <div class="unit-title" onclick="toggleSubMenu(this)">
+                        ${unit} <span>▸</span>
+                    </div>
+                    <div class="sub-item-list">
+                        ${Array.from(unitMap[unit]).map(sub => `
+                            <div class="sub-item" onclick="loadContent('${unit}', '${sub}')">${sub}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleSubMenu(el) {
+            const sub = el.nextElementSibling;
+            const arrow = el.querySelector('span');
+            const isOpen = sub.style.display === 'block';
+            sub.style.display = isOpen ? 'none' : 'block';
+            arrow.innerHTML = isOpen ? '▸' : '▾';
+        }
+
+        // 首頁顯示邏輯：最新上架
+        function showHome() {
+            const area = document.getElementById('display-area');
+            // 按日期倒序排列，取前 5 題
+            const newest = [...allData].sort((a, b) => new Date(b['新增日期']) - new Date(a['新增日期'])).slice(0, 5);
+
+            area.innerHTML = `
+                <div class="home-section">
+                    <h1 style="font-size:2.5rem; margin-bottom:10px;">你好，plaidfunction1010</h1>
+                    <p style="color:#666; margin-bottom:40px;">歡迎來到 RM_33 戰情室。今天準備好挑戰了嗎？</p>
+                    
+                    <div class="section-title">✨ 最新更新題目</div>
+                    <div id="new-items">
+                        ${newest.map(p => `
+                            <div class="card" onclick="loadContent('${p['單元名稱']}', '${p['主題']}')" style="cursor:pointer; border-left:5px solid var(--accent-color);">
+                                <small>${p['新增日期']} | ${p['單元名稱']}</small>
+                                <div style="font-size:1.1rem; margin-top:10px; font-weight:bold;">${p['主題']} - ${p['題目ID'] || ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadContent(unitName, subName) {
+            const area = document.getElementById('display-area');
+            const problems = allData.filter(d => d['單元名稱'] === unitName && (d['主題'] || '一般練習') === subName);
+            
+            area.innerHTML = `<h1 class="section-title">${unitName} > ${subName}</h1>`;
+            
+            problems.forEach((p, idx) => {
+                const raw = p['題目內容，可輸入 LaTeX'] || '';
+                const img = p['圖片網址'] || '';
+                const qBody = raw.split(/\(\d\)/)[0];
+                const opts = raw.match(/\(\d\)[^(]*/g) || [];
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div style="color:#999; font-size:0.8rem; margin-bottom:10px;">ID: ${p['題目ID'] || 'N/A'}</div>
+                    ${img ? `<img src="${img}" class="problem-img">` : ''}
+                    <div class="problem-text">${qBody}</div>
+                    <div class="options-grid">
+                        ${opts.map(o => {
+                            const n = o.match(/\((\d)\)/)[1];
+                            return `<div class="opt-btn" onclick="checkChoice(this, '${n}', '${p['答案']}')">${o}</div>`;
+                        }).join('')}
+                    </div>
+                `;
+                area.appendChild(card);
+            });
+
+            renderMathInElement(area, {
+                delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}, {left: "\\(", right: "\\)", display: false}],
+                throwOnError: false
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function checkChoice(btn, chosen, correct) {
+            const ans = correct.replace(/[^0-9]/g, '');
+            if(chosen === ans) {
+                btn.classList.add('correct');
+                // 未來在此加入「種樹獎勵」邏輯
+            } else {
+                btn.classList.add('wrong');
+                setTimeout(() => btn.classList.remove('wrong'), 500);
+            }
+        }
+
+        // 專注模式邏輯
+        let timer;
+        let timeLeft = 1500;
+        function toggleFocus() {
+            const btn = document.getElementById('focus-ctrl');
+            if(btn.innerText === "開始專注") {
+                btn.innerText = "放棄專注";
+                timer = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay();
+                    if(timeLeft <= 0) {
+                        clearInterval(timer);
+                        alert("專注完成！你獲得了一塊建築石材！");
+                        btn.innerText = "開始專注";
+                        timeLeft = 1500;
+                    }
+                }, 1000);
+            } else {
+                if(confirm("確定要放棄嗎？正在生長的植物會枯萎喔！")) {
+                    clearInterval(timer);
+                    btn.innerText = "開始專注";
+                    timeLeft = 1500;
+                    updateTimerDisplay();
+                }
+            }
+        }
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
