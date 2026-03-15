@@ -9,50 +9,59 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
         :root { 
             --sidebar-width: 300px; 
-            --primary-bg: #111;
+            --sidebar-gradient: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
             --accent-color: #3498db; 
-            --card-bg: #ffffff;
-            --iso-grid-size: 40px;
+            --grass-color: #7db343;
+            --tile-border: rgba(255,255,255,0.2);
         }
 
-        /* 內容保護：禁止選取、禁用右鍵 */
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
-            margin: 0; display: flex; height: 100vh; background-color: #f8f9fa;
+            margin: 0; display: flex; height: 100vh; background-color: #f0f2f5;
             -webkit-user-select: none; user-select: none; overflow: hidden;
         }
 
-        /* 側邊欄：左上角點擊回首頁 */
-        #sidebar { width: var(--sidebar-width); background: var(--primary-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.3); }
-        .sidebar-header { 
-            padding: 40px 20px; text-align: center; border-bottom: 1px solid #333; 
-            cursor: pointer; transition: 0.3s; background: linear-gradient(to bottom, #222, #111);
+        /* 側邊欄：回歸黑色背景 */
+        #sidebar { 
+            width: var(--sidebar-width); background: var(--sidebar-gradient); 
+            color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.5); 
         }
-        .sidebar-header:hover { background: #222; }
+        .sidebar-header { 
+            padding: 45px 20px; text-align: center; border-bottom: 1px solid #333; 
+            cursor: pointer; transition: 0.3s;
+        }
         .sidebar-header h2 { margin: 0; font-size: 1.3rem; color: var(--accent-color); letter-spacing: 1px; }
+
+        .user-auth-area { padding: 20px; border-bottom: 1px solid #333; text-align: center; }
+        .btn-auth { background: #fff; color: #333; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
 
         .unit-list { flex-grow: 1; overflow-y: auto; }
         .unit-group { border-bottom: 1px solid #222; }
-        .unit-title { padding: 18px 25px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.95rem; color: #eee; }
+        .unit-title { padding: 18px 25px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.95rem; color: #bbb; }
         .sub-item-list { display: none; background: #050505; }
-        .sub-item { padding: 12px 45px; font-size: 0.85rem; color: #666; cursor: pointer; transition: 0.2s; }
-        .sub-item:hover { color: var(--accent-color); background: #111; }
+        .sub-item { padding: 12px 45px; font-size: 0.85rem; color: #666; cursor: pointer; }
+        .sub-item:hover { color: var(--accent-color); }
 
         /* 主內容 */
-        #main-content { flex-grow: 1; padding: 50px; overflow-y: auto; scroll-behavior: smooth; position: relative; }
-        .section-title { font-size: 1.6rem; margin-bottom: 30px; border-left: 6px solid var(--accent-color); padding-left: 18px; color: #2c3e50; font-weight: 700; }
-        .card { background: var(--card-bg); padding: 35px; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); margin-bottom: 35px; border: 1px solid #eee; }
+        #main-content { flex-grow: 1; padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; }
+        .section-title { font-size: 1.5rem; margin-bottom: 25px; border-left: 6px solid var(--accent-color); padding-left: 18px; color: #2c3e50; font-weight: 700; }
+        .card { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 5px 25px rgba(0,0,0,0.05); margin-bottom: 30px; }
 
-        /* 🏰 等距視角地圖 (Isometric Map) */
+        /* 🏰 強化後的地圖 (Isometric Map) */
         #map-container { 
-            width: 100%; height: 380px; background: #96c93d; border-radius: 20px; 
+            width: 100%; height: 400px; background: #8899a6; border-radius: 20px; 
             overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;
-            margin-bottom: 40px; border: 5px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 40px; border: 8px solid #fff; box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
         .iso-scene { 
             position: relative; width: 320px; height: 320px;
@@ -62,52 +71,50 @@
         .iso-grid { 
             display: grid; grid-template-columns: repeat(8, var(--iso-grid-size)); 
             grid-template-rows: repeat(8, var(--iso-grid-size));
-            border: 1px solid rgba(255,255,255,0.2);
+            background: var(--grass-color);
         }
-        .iso-tile { width: var(--iso-grid-size); height: var(--iso-grid-size); border: 0.5px solid rgba(255,255,255,0.1); }
+        .iso-tile { width: var(--iso-grid-size); height: var(--iso-grid-size); border: 0.5px solid var(--tile-border); box-sizing: border-box; }
         
-        /* 建築物圖片樣式 */
         .building { 
             position: absolute; width: 60px; height: auto; 
             transform: translate(-50%, -100%) rotateZ(-45deg) rotateX(-60deg); 
             transform-origin: bottom center;
-            filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.2));
+            filter: drop-shadow(-8px 8px 10px rgba(0,0,0,0.3));
             pointer-events: none; z-index: 10;
         }
 
-        /* 專注計時器 (右上角) */
-        #focus-timer-box { 
-            position: fixed; top: 25px; right: 25px; background: #fff; padding: 12px 25px; 
-            border-radius: 50px; display: flex; align-items: center; gap: 15px; 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1); z-index: 1000; border: 2px solid var(--accent-color); 
-        }
-        .btn-focus { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-
-        /* 累積人氣 (右下角) */
-        #visitor-counter { 
-            position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); 
-            padding: 8px 18px; border-radius: 30px; color: white; font-size: 12px; 
-            transition: 0.3s; z-index: 1001; 
-        }
-        #visitor-counter:hover { background: rgba(0,0,0,0.9); }
+        /* 介面按鈕與計時器 */
+        #focus-timer-box { position: fixed; top: 25px; right: 25px; background: #fff; padding: 12px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); z-index: 1000; border: 2px solid var(--accent-color); }
+        .btn-action { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        
+        #visitor-counter { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 8px 18px; border-radius: 30px; color: white; font-size: 12px; z-index: 1001; }
 
         .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 25px; }
-        .opt-btn { padding: 18px; border: 2px solid #f1f3f5; border-radius: 12px; cursor: pointer; background: #fff; font-size: 1.05rem; }
-        .opt-btn.correct { background: #27ae60 !important; color: white; border-color: #27ae60; }
+        .opt-btn { padding: 18px; border: 2px solid #f1f3f5; border-radius: 12px; cursor: pointer; background: #fff; }
+        .opt-btn.correct { background: #27ae60 !important; color: white; }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
     <div id="focus-timer-box">
-        ⏳ <span id="timer-display" style="font-weight:bold; font-size:1.2rem;">25:00</span>
-        <button class="btn-focus" id="focus-ctrl" onclick="toggleFocus()">開始專注</button>
+        ⏳ <span id="timer-display" style="font-weight:bold;">25:00</span>
+        <button class="btn-action" id="focus-ctrl" onclick="toggleFocus()">開始專注</button>
     </div>
 
     <nav id="sidebar">
         <div class="sidebar-header" onclick="showHome()">
             <h2>RunningMath_33</h2>
-            <small style="opacity:0.6; color:#3498db;">方紋衫數學 2.0</small>
+            <small style="color:var(--accent-color); letter-spacing:1px;">方紋衫數學 2.0</small>
         </div>
+
+        <div class="user-auth-area">
+            <div id="user-info" style="font-size: 0.8rem; margin-bottom: 10px; display: none;">
+                歡迎, <span id="user-name"></span>
+            </div>
+            <button class="btn-auth" id="btn-login" onclick="login()">Google 登入</button>
+            <button class="btn-auth" id="btn-logout" onclick="logout()" style="display:none;">登出</button>
+        </div>
+
         <div class="unit-list" id="unit-list"></div>
     </nav>
 
@@ -121,26 +128,79 @@
     </div>
 
     <script>
-        // 資料庫 CSV 連結
+        // ---------------------------------------------------------
+        // 【1. Firebase 設定區】 - 請在此替換成你自己的金鑰
+        // ---------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "你的API金鑰",
+            authDomain: "你的專案ID.firebaseapp.com",
+            projectId: "你的專案ID",
+            storageBucket: "你的專案ID.appspot.com",
+            messagingSenderId: "你的發送ID",
+            appId: "你的AppID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // ---------------------------------------------------------
+        // 【2. 資料讀取與 UI 邏輯】
+        // ---------------------------------------------------------
         const sheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJbN35V8s8IEgl2N1EjFa65gvHLlTxmHJgOn-JA55isj9v5ka-VqWbHT2cy435g5d85S6BneVtE1fk/pub?output=csv'; 
         let allData = [];
-        let stoneCount = 200; // 石材數量
+        let stoneCount = 0;
+        let currentUser = null;
 
         async function init() {
             Papa.parse(sheetCsvUrl, {
                 download: true, header: true,
                 complete: function(results) {
                     allData = results.data.filter(r => r['單元名稱']);
-                    
-                    // 自動排序：按單元數字排序 (9 號會在 18 號前面)
-                    allData.sort((a, b) => {
-                        const numA = parseInt(a['單元名稱'].match(/\d+/)) || 0;
-                        const numB = parseInt(b['單元名稱'].match(/\d+/)) || 0;
-                        return numA - numB;
-                    });
-
+                    allData.sort((a, b) => (parseInt(a['單元名稱'].match(/\d+/)) || 0) - (parseInt(b['單元名稱'].match(/\d+/)) || 0));
                     renderSidebar();
                     showHome();
+                }
+            });
+
+            // 監聽 Firebase 登入狀態
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('user-info').style.display = 'block';
+                    document.getElementById('user-name').innerText = user.displayName;
+                    document.getElementById('btn-login').style.display = 'none';
+                    document.getElementById('btn-logout').style.display = 'inline-block';
+                    loadUserProgress();
+                } else {
+                    currentUser = null;
+                    document.getElementById('user-info').style.display = 'none';
+                    document.getElementById('btn-login').style.display = 'inline-block';
+                    document.getElementById('btn-logout').style.display = 'none';
+                }
+            });
+        }
+
+        // Firebase 登入/登出函數
+        function login() { auth.signInWithPopup(provider); }
+        function logout() { auth.signOut().then(() => location.reload()); }
+
+        // 儲存進度到 Firebase (測試版)
+        function saveProgress() {
+            if (!currentUser) return;
+            db.collection("users").doc(currentUser.uid).set({
+                stoneCount: stoneCount,
+                lastUpdated: new Date()
+            }, { merge: true });
+        }
+
+        // 讀取 Firebase 進度
+        function loadUserProgress() {
+            if (!currentUser) return;
+            db.collection("users").doc(currentUser.uid).get().then(doc => {
+                if (doc.exists) {
+                    stoneCount = doc.data().stoneCount || 0;
+                    if(document.getElementById('stone-val')) document.getElementById('stone-val').innerText = stoneCount;
                 }
             });
         }
@@ -166,10 +226,8 @@
 
         function toggleSubMenu(el) {
             const sub = el.nextElementSibling;
-            const arrow = el.querySelector('span');
-            const isOpen = sub.style.display === 'block';
-            sub.style.display = isOpen ? 'none' : 'block';
-            arrow.innerHTML = isOpen ? '▸' : '▾';
+            sub.style.display = (sub.style.display === 'block') ? 'none' : 'block';
+            el.querySelector('span').innerHTML = (sub.style.display === 'block') ? '▾' : '▸';
         }
 
         function showHome() {
@@ -177,7 +235,7 @@
             const newest = [...allData].sort((a, b) => new Date(b['新增日期']) - new Date(a['新增日期'])).slice(0, 3);
 
             area.innerHTML = `
-                <h1 class="section-title">你好, plaidfunction1010</h1>
+                <h1 class="section-title">你好, ${currentUser ? currentUser.displayName : 'plaidfunction1010'}</h1>
                 <p>目前的資源：💎 神聖石材 x <span id="stone-val" style="font-weight:bold; color:var(--accent-color);">${stoneCount}</span></p>
                 
                 <div id="map-container">
@@ -187,7 +245,7 @@
                         </div>
                     </div>
                     <div style="position:absolute; bottom:20px; right:20px;">
-                        <button class="btn-focus" onclick="buildHouse()" style="background:#27ae60; box-shadow:0 4px 10px rgba(0,0,0,0.2);">蓋一間房子 (-1 石材)</button>
+                        <button class="btn-action" onclick="buildHouse()" style="background:#27ae60; box-shadow:0 10px 30px rgba(0,0,0,0.2);">蓋一間房子 (-1 石材)</button>
                     </div>
                 </div>
 
@@ -204,30 +262,25 @@
         }
 
         function buildHouse() {
-            if(stoneCount < 1) { alert("石材不足！請先完成一次專注模式。"); return; }
+            if(stoneCount < 1) { alert("石材不足！"); return; }
             stoneCount--;
-            document.getElementById('stone-val').innerText = stoneCount;
+            if(document.getElementById('stone-val')) document.getElementById('stone-val').innerText = stoneCount;
+            saveProgress(); // 蓋完立刻同步到 Firebase
             
             const scene = document.getElementById('iso-scene');
             const houseImg = document.createElement('img');
-            
-            // 測試用像素房子，未來可更換為你在 GitHub images 中的連結
             houseImg.src = 'https://cdn-icons-png.flaticon.com/512/619/619153.png'; 
             houseImg.className = 'building';
             
-            // 隨機在 8x8 格子中選擇位置
             const posX = Math.floor(Math.random() * 8) * 40 + 20;
             const posY = Math.floor(Math.random() * 8) * 40 + 20;
-            
-            houseImg.style.left = posX + 'px';
-            houseImg.style.top = posY + 'px';
+            houseImg.style.left = posX + 'px'; houseImg.style.top = posY + 'px';
             scene.appendChild(houseImg);
         }
 
         function loadContent(unitName, subName) {
             const area = document.getElementById('display-area');
             const problems = allData.filter(d => d['單元名稱'] === unitName && (d['主題'] || '核心概念') === subName);
-            
             area.innerHTML = `<h1 class="section-title">${unitName} > ${subName}</h1>`;
             
             problems.forEach((p, idx) => {
@@ -239,8 +292,8 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div style="color:#bbb; font-size:0.75rem; margin-bottom:15px;">Unique ID: ${p['題目ID']}</div>
-                    ${img ? `<img src="${img}" class="problem-img">` : ''}
+                    <div style="color:#bbb; font-size:0.75rem; margin-bottom:15px;">ID: ${p['題目ID']}</div>
+                    ${img ? `<img src="${img}" style="width:100%; max-height:400px; object-fit:contain; margin-bottom:20px; border-radius:10px;">` : ''}
                     <div class="problem-text">${qBody}</div>
                     <div class="options-grid">
                         ${opts.map(o => {
@@ -259,45 +312,33 @@
             const ans = correct.replace(/[^0-9]/g, '');
             if(chosen === ans) {
                 btn.classList.add('correct');
-                // 這裡未來可以加入「答對題數」累積獎勵
             } else {
                 btn.style.background = '#ff7675';
-                btn.style.color = '#fff';
-                setTimeout(() => { btn.style.background = '#fff'; btn.style.color = '#000'; }, 500);
+                setTimeout(() => btn.style.background = '#fff', 500);
             }
         }
 
-        let timer;
-        let timeLeft = 1500;
+        let timer; let timeLeft = 1500;
         function toggleFocus() {
             const btn = document.getElementById('focus-ctrl');
             if(btn.innerText === "開始專注") {
-                btn.innerText = "放棄專注";
+                btn.innerText = "棄賽";
                 timer = setInterval(() => {
-                    timeLeft--;
-                    updateTimerDisplay();
+                    timeLeft--; updateTimerDisplay();
                     if(timeLeft <= 0) {
-                        clearInterval(timer);
-                        stoneCount++;
-                        alert("🎉 專注達成！你獲得了 1 個神聖石材！");
-                        btn.innerText = "開始專注";
-                        timeLeft = 1500;
-                        updateTimerDisplay();
+                        clearInterval(timer); stoneCount++; saveProgress();
+                        alert("🎉 專注完成！石材 +1"); btn.innerText = "開始專注"; timeLeft = 1500; updateTimerDisplay();
                         if(document.getElementById('stone-val')) document.getElementById('stone-val').innerText = stoneCount;
                     }
                 }, 1000);
             } else {
-                if(confirm("確定要放棄這段專注時間嗎？小樹會枯萎喔！")) {
-                    clearInterval(timer);
-                    btn.innerText = "開始專注";
-                    timeLeft = 1500;
-                    updateTimerDisplay();
+                if(confirm("要放棄嗎？建築進度會歸零喔！")) {
+                    clearInterval(timer); btn.innerText = "開始專注"; timeLeft = 1500; updateTimerDisplay();
                 }
             }
         }
         function updateTimerDisplay() {
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
+            const m = Math.floor(timeLeft / 60); const s = timeLeft % 60;
             document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
