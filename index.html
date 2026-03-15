@@ -106,13 +106,7 @@
         // ---------------------------------------------------------
         // 【Firebase 設定區】 - 請將以下內容更換為你自己的金鑰
         // ---------------------------------------------------------
-       // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+       // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyA2J4ZISTM1Xb-8bW1Wt1YrFhJ5DXhmvjY",
@@ -123,10 +117,10 @@ const firebaseConfig = {
   appId: "1:384743994340:web:3d84cc7f2ca410dff64df1",
   measurementId: "G-ZMMX4MQCB8"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
 
         // ---------------------------------------------------------
         // 【核心邏輯】
