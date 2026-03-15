@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -30,21 +31,21 @@
             -webkit-user-select: none; user-select: none; overflow: hidden;
         }
 
-        /* 側邊欄：深色質感 */
+        /* 側邊欄：回歸黑色漸層 */
         #sidebar { 
             width: var(--sidebar-width); background: var(--sidebar-gradient); 
             color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.5); 
         }
-        .sidebar-header { padding: 45px 20px; text-align: center; border-bottom: 1px solid #333; cursor: pointer; }
+        .sidebar-header { padding: 45px 20px; text-align: center; border-bottom: 1px solid #333; cursor: pointer; transition: 0.3s; }
+        .sidebar-header:hover { background: rgba(255,255,255,0.05); }
         .sidebar-header h2 { margin: 0; font-size: 1.3rem; color: var(--accent-color); letter-spacing: 1px; }
 
         /* 帳號區域 */
         .user-auth-area { padding: 25px; border-bottom: 1px solid #333; text-align: center; background: rgba(255,255,255,0.03); }
         .user-name-tag { font-size: 0.9rem; margin-bottom: 12px; color: #eee; font-weight: 500; }
-        .btn-auth { background: #fff; color: #333; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; width: 80%; transition: 0.3s; }
+        .btn-auth { background: #fff; color: #333; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; width: 85%; transition: 0.3s; }
         .btn-auth:hover { background: var(--accent-color); color: white; }
 
-        /* 單元列表 */
         .unit-list { flex-grow: 1; overflow-y: auto; }
         .unit-group { border-bottom: 1px solid #222; }
         .unit-title { padding: 18px 25px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.95rem; color: #bbb; transition: 0.2s; }
@@ -59,14 +60,16 @@
         .card { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 5px 25px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #eee; }
         
         /* 歷史紀錄卡片 */
-        .history-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 50px; }
-        .history-card { background: #e8f4fd; border: 1px solid #d0e7f9; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
-        .history-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2); }
+        .history-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 50px; }
+        .history-card { background: #e8f4fd; border: 1px solid #d0e7f9; padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .history-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(52, 152, 219, 0.2); background: #fff; }
 
+        /* 右下角人氣計數器 */
         #visitor-counter { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 8px 18px; border-radius: 30px; color: white; font-size: 12px; z-index: 1001; }
+        
         .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 25px; }
-        .opt-btn { padding: 18px; border: 2px solid #f1f3f5; border-radius: 12px; cursor: pointer; background: #fff; }
-        .opt-btn.correct { background: #27ae60 !important; color: white; }
+        .opt-btn { padding: 18px; border: 2px solid #f1f3f5; border-radius: 12px; cursor: pointer; background: #fff; transition: 0.2s; }
+        .opt-btn.correct { background: #27ae60 !important; color: white; border-color: #27ae60; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -74,16 +77,16 @@
     <nav id="sidebar">
         <div class="sidebar-header" onclick="showHome()">
             <h2>RunningMath_33</h2>
-            <small style="color:var(--accent-color); letter-spacing:1px; font-weight:700;">方紋衫數學 2.0</small>
+            <small style="color:var(--accent-color); font-weight:700;">方紋衫數學 2.0</small>
         </div>
 
         <div class="user-auth-area">
             <div id="user-info-box" style="display: none;">
                 <div class="user-name-tag">你好, <span id="user-display-name"></span></div>
-                <button class="btn-auth" onclick="logout()" style="background:#eee; font-size:0.7rem;">登出帳號</button>
+                <button class="btn-auth" onclick="logout()" style="background:#eee; font-size:0.75rem;">登出帳號</button>
             </div>
             <div id="login-box">
-                <button class="btn-auth" onclick="login()">使用 Google 登入</button>
+                <button class="btn-auth" onclick="login()">使用 Google 帳號登入</button>
             </div>
         </div>
 
@@ -101,7 +104,7 @@
 
     <script>
         // ---------------------------------------------------------
-        // 【1. Firebase 設定區】 - 請在此替換成你自己的金鑰
+        // 【Firebase 設定區】 - 請將以下內容更換為你自己的金鑰
         // ---------------------------------------------------------
         const firebaseConfig = {
   apiKey: "AIzaSyA2J4ZISTM1Xb-8bW1Wt1YrFhJ5DXhmvjY",
@@ -118,12 +121,12 @@
         const provider = new firebase.auth.GoogleAuthProvider();
 
         // ---------------------------------------------------------
-        // 【2. 資料與狀態】
+        // 【核心邏輯】
         // ---------------------------------------------------------
         const sheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJbN35V8s8IEgl2N1EjFa65gvHLlTxmHJgOn-JA55isj9v5ka-VqWbHT2cy435g5d85S6BneVtE1fk/pub?output=csv'; 
         let allData = [];
         let currentUser = null;
-        let recentPractices = []; // 存放最近 3 個單元名稱
+        let recentPractices = []; 
 
         async function init() {
             Papa.parse(sheetCsvUrl, {
@@ -153,26 +156,21 @@
             });
         }
 
-        // Firebase 邏輯
         function login() { auth.signInWithPopup(provider); }
         function logout() { auth.signOut().then(() => location.reload()); }
 
-        // 儲存練習紀錄
+        // 更新 Firebase 中的練習歷史紀錄
         async function updatePracticeHistory(unitName) {
             if (!currentUser) return;
-            
-            // 邏輯：將單元移至最前，保持 3 個
+            // 邏輯：將最近練習單元置頂，最多保留 3 個
             let newHistory = [unitName, ...recentPractices.filter(u => u !== unitName)].slice(0, 3);
-            
             await db.collection("users").doc(currentUser.uid).set({
                 recentHistory: newHistory,
                 lastSeen: new Date()
             }, { merge: true });
-            
             recentPractices = newHistory;
         }
 
-        // 讀取練習紀錄
         function loadPracticeHistory() {
             if (!currentUser) return;
             db.collection("users").doc(currentUser.uid).get().then(doc => {
@@ -183,7 +181,6 @@
             });
         }
 
-        // UI 渲染
         function renderSidebar() {
             const container = document.getElementById('unit-list');
             const unitMap = {};
@@ -205,8 +202,9 @@
 
         function toggleSubMenu(el) {
             const sub = el.nextElementSibling;
-            sub.style.display = (sub.style.display === 'block') ? 'none' : 'block';
-            el.querySelector('span').innerHTML = (sub.style.display === 'block') ? '▾' : '▸';
+            const isOpen = sub.style.display === 'block';
+            sub.style.display = isOpen ? 'none' : 'block';
+            el.querySelector('span').innerHTML = isOpen ? '▸' : '▾';
         }
 
         function showHome() {
@@ -217,12 +215,12 @@
                 <h1 class="section-title">你好, ${currentUser ? currentUser.displayName : 'plaidfunction1010'}</h1>
                 
                 ${currentUser && recentPractices.length > 0 ? `
-                    <div class="section-title">📍 最近練習的單元</div>
+                    <div class="section-title">📍 最近練習過的單元</div>
                     <div class="history-grid">
                         ${recentPractices.map(unit => `
                             <div class="history-card" onclick="loadFirstSubOfUnit('${unit}')">
                                 <strong>${unit}</strong><br>
-                                <small style="color:#666;">點擊繼續複習</small>
+                                <small style="color:#3498db; font-weight:bold;">點擊繼續挑戰</small>
                             </div>
                         `).join('')}
                     </div>
@@ -232,7 +230,7 @@
                 <div style="display:grid; gap:15px; margin-bottom:40px;">
                     ${newest.map(p => `
                         <div class="card" onclick="loadContent('${p['單元名稱']}', '${p['主題']}')" style="cursor:pointer; padding:20px; display:flex; justify-content:space-between; align-items:center; border-left:5px solid var(--accent-color);">
-                            <div><b>[${p['單元名稱']}]</b> ${p['主題']}</div>
+                            <div><b>[${p['單元名稱']}]</b> ${p['主題']} - ${p['題目ID']}</div>
                             <small style="color:#999;">${p['新增日期']}</small>
                         </div>
                     `).join('')}
@@ -240,14 +238,13 @@
             `;
         }
 
-        // 輔助功能：從歷史紀錄點擊後載入該單元內容
         function loadFirstSubOfUnit(unitName) {
             const firstProb = allData.find(d => d['單元名稱'] === unitName);
             if(firstProb) loadContent(unitName, firstProb['主題'] || '核心概念');
         }
 
         function loadContent(unitName, subName) {
-            updatePracticeHistory(unitName); // 觸發 Firebase 儲存紀錄
+            if (currentUser) updatePracticeHistory(unitName);
             
             const area = document.getElementById('display-area');
             const problems = allData.filter(d => d['單元名稱'] === unitName && (d['主題'] || '核心概念') === subName);
@@ -262,8 +259,8 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div style="color:#bbb; font-size:0.75rem; margin-bottom:15px;">ID: ${p['題目ID']}</div>
-                    ${img ? `<img src="${img}" style="width:100%; max-height:400px; object-fit:contain; margin-bottom:20px; border-radius:10px;">` : ''}
+                    <div style="color:#bbb; font-size:0.75rem; margin-bottom:15px;">Unique ID: ${p['題目ID']}</div>
+                    ${img ? `<img src="${img}" style="width:100%; max-height:450px; object-fit:contain; margin-bottom:20px; border-radius:12px;">` : ''}
                     <div class="problem-text">${qBody}</div>
                     <div class="options-grid">
                         ${opts.map(o => {
@@ -274,7 +271,15 @@
                 `;
                 area.appendChild(card);
             });
-            renderMathInElement(area, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}, {left: "\\(", right: "\\)", display: false}], throwOnError: false });
+
+            renderMathInElement(area, { 
+                delimiters: [
+                    {left: "$$", right: "$$", display: true}, 
+                    {left: "$", right: "$", display: false}, 
+                    {left: "\\(", right: "\\)", display: false}
+                ], 
+                throwOnError: false 
+            });
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
