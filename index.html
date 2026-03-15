@@ -1,242 +1,51 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>方紋衫數學 2.0 | RunningMath_33_0826</title>
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+    /* ... 保留之前的 CSS ... */
 
-    <style>
-        :root { 
-            --sidebar-width: 300px; 
-            --primary-bg: #111;
-            --accent-color: #3498db; 
-            --card-bg: #ffffff;
-            --iso-grid-size: 40px;
+    /* 💡 建築物樣式修正：從方塊改為圖片 */
+    .building { 
+        position: absolute; 
+        width: 60px;  /* 稍微大一點比較好點擊 */
+        height: auto; 
+        /* 關鍵：等距視角的圖片需要微調位置，讓底部對準格子 */
+        transform: translate(-50%, -100%) rotateZ(-45deg) rotateX(-60deg); 
+        transform-origin: bottom center;
+        filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.2));
+        pointer-events: none; /* 讓圖片不影響點擊底下的格子 */
+        z-index: 10;
+    }
+</style>
+
+<script>
+    // ... 保留之前的 init 與其他邏輯 ...
+
+    // 💡 修正後的蓋房子函數
+    function buildHouse() {
+        if(stoneCount < 1) { 
+            alert("石材不足！請先開始專注採集。"); 
+            return; 
         }
-
-        body { 
-            font-family: 'Noto Sans TC', sans-serif; 
-            margin: 0; display: flex; height: 100vh; background-color: #f0f2f5;
-            -webkit-user-select: none; user-select: none; overflow: hidden;
-        }
-
-        /* 側邊欄 */
-        #sidebar { width: var(--sidebar-width); background: var(--primary-bg); color: white; display: flex; flex-direction: column; z-index: 100; }
-        .sidebar-header { padding: 30px 20px; text-align: center; border-bottom: 1px solid #333; cursor: pointer; }
-        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: var(--accent-color); }
-        .unit-list { flex-grow: 1; overflow-y: auto; }
-        .unit-group { border-bottom: 1px solid #222; }
-        .unit-title { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.95rem; }
-        .sub-item-list { display: none; background: #050505; }
-        .sub-item { padding: 10px 40px; font-size: 0.85rem; color: #666; cursor: pointer; }
-        .sub-item:hover { color: var(--accent-color); }
-
-        /* 主內容 */
-        #main-content { flex-grow: 1; padding: 40px; overflow-y: auto; position: relative; }
-        .card { background: var(--card-bg); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 30px; }
         
-        /* 💡 等距視角地圖 (Isometric Map) */
-        #map-container { 
-            width: 100%; height: 350px; background: #e0e7ff; border-radius: 20px; 
-            overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;
-            margin-bottom: 30px; border: 4px solid #fff; box-shadow: inset 0 0 50px rgba(0,0,0,0.05);
-        }
-        .iso-scene { 
-            position: relative; width: 400px; height: 400px;
-            transform: rotateX(60deg) rotateZ(45deg); 
-            transform-style: preserve-3d;
-            transition: 0.5s;
-        }
-        .iso-grid { 
-            display: grid; grid-template-columns: repeat(8, var(--iso-grid-size)); 
-            grid-template-rows: repeat(8, var(--iso-grid-size));
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .iso-tile { 
-            width: var(--iso-grid-size); height: var(--iso-grid-size); 
-            border: 0.5px solid rgba(0,0,0,0.05); background: #96c93d; /* 草地顏色 */
-        }
-        .building { 
-            position: absolute; width: 30px; height: 30px; background: #f1c40f; 
-            transform: translateZ(15px); box-shadow: -5px 5px 10px rgba(0,0,0,0.2);
-            border: 2px solid #d35400;
-        }
-
-        /* 專注計時器 */
-        #focus-timer-box { position: fixed; top: 20px; right: 20px; background: #fff; padding: 10px 20px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 1000; border: 2px solid var(--accent-color); }
-        .btn-focus { background: var(--accent-color); color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-
-        /* 修復：累積人氣移至右下角 */
-        #visitor-counter { position: fixed; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; color: white; font-size: 11px; transition: 0.3s; z-index: 1000; }
-        #visitor-counter:hover { background: rgba(0,0,0,0.9); }
-
-        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 20px; }
-        .opt-btn { padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: #fff; }
-        .opt-btn.correct { background: #27ae60 !important; color: white; }
-    </style>
-</head>
-<body oncontextmenu="return false;">
-
-    <div id="focus-timer-box">
-        ⏳ <span id="timer-display">25:00</span>
-        <button class="btn-focus" id="focus-ctrl" onclick="toggleFocus()">開始專注</button>
-    </div>
-
-    <nav id="sidebar">
-        <div class="sidebar-header" onclick="showHome()">
-            <h2>RunningMath_33</h2>
-            <small style="opacity:0.5;">方紋衫數學 2.0</small>
-        </div>
-        <div class="unit-list" id="unit-list"></div>
-    </nav>
-
-    <main id="main-content">
-        <div id="display-area"></div>
-    </main>
-
-    <div id="visitor-counter">
-        累積人氣：
-        <img src="https://hits.dwyl.com/plaidfunction1010/RM_33.svg" alt="Hits" style="vertical-align: middle;">
-    </div>
-
-    <script>
-        const sheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJbN35V8s8IEgl2N1EjFa65gvHLlTxmHJgOn-JA55isj9v5ka-VqWbHT2cy435g5d85S6BneVtE1fk/pub?output=csv'; 
-        let allData = [];
-        let stoneCount = 10;
-
-        async function init() {
-            Papa.parse(sheetCsvUrl, {
-                download: true, header: true,
-                complete: function(results) {
-                    allData = results.data.filter(r => r['單元名稱']);
-                    allData.sort((a, b) => (parseInt(a['單元名稱'].match(/\d+/)) || 0) - (parseInt(b['單元名稱'].match(/\d+/)) || 0));
-                    renderSidebar();
-                    showHome();
-                }
-            });
-        }
-
-        function renderSidebar() {
-            const container = document.getElementById('unit-list');
-            const unitMap = {};
-            allData.forEach(p => {
-                const u = p['單元名稱'];
-                const sub = p['主題'] || '核心概念';
-                if (!unitMap[u]) unitMap[u] = new Set();
-                unitMap[u].add(sub);
-            });
-            container.innerHTML = Object.keys(unitMap).map(unit => `
-                <div class="unit-group">
-                    <div class="unit-title" onclick="toggleSubMenu(this)">${unit} <span>▸</span></div>
-                    <div class="sub-item-list">
-                        ${Array.from(unitMap[unit]).map(sub => `<div class="sub-item" onclick="loadContent('${unit}', '${sub}')">${sub}</div>`).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function toggleSubMenu(el) {
-            const sub = el.nextElementSibling;
-            sub.style.display = (sub.style.display === 'block') ? 'none' : 'block';
-            el.querySelector('span').innerHTML = (sub.style.display === 'block') ? '▾' : '▸';
-        }
-
-        function showHome() {
-            const area = document.getElementById('display-area');
-            area.innerHTML = `
-                <h1>你好, plaidfunction1010</h1>
-                <p>目前的資源：💎 神聖石材 x <span id="stone-val">${stoneCount}</span></p>
-                
-                <div id="map-container">
-                    <div class="iso-scene" id="iso-scene">
-                        <div class="iso-grid">
-                            ${Array(64).fill('<div class="iso-tile"></div>').join('')}
-                        </div>
-                        </div>
-                    <div style="position:absolute; bottom:15px; right:15px;">
-                        <button class="btn-focus" onclick="buildHouse()">蓋一間房子 (-1 石材)</button>
-                    </div>
-                </div>
-
-                <div class="card" style="background:#fff9db; border:1px dashed #f1c40f;">
-                    <strong>RM_33 新手教學：</strong><br>
-                    完成 25 分鐘專注可獲得 1 個石材。石材可以用來在上方荒地蓋出你的數學城鎮。
-                </div>
-            `;
-        }
-
-        function buildHouse() {
-            if(stoneCount < 1) { alert("石材不足！請先開始專注。"); return; }
-            stoneCount--;
-            document.getElementById('stone-val').innerText = stoneCount;
-            const scene = document.getElementById('iso-scene');
-            const house = document.createElement('div');
-            house.className = 'building';
-            // 隨機放在 8x8 的格子上
-            const x = Math.floor(Math.random() * 8) * 40 + 5;
-            const y = Math.floor(Math.random() * 8) * 40 + 5;
-            house.style.left = x + 'px';
-            house.style.top = y + 'px';
-            scene.appendChild(house);
-        }
-
-        function loadContent(unitName, subName) {
-            const area = document.getElementById('display-area');
-            const problems = allData.filter(d => d['單元名稱'] === unitName && (d['主題'] || '核心概念') === subName);
-            area.innerHTML = `<h2>${unitName} > ${subName}</h2>`;
-            problems.forEach((p, idx) => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div style="font-size:0.8rem; color:#999;">ID: ${p['題目ID']}</div>
-                    <p class="problem-text">${p['題目內容，可輸入 LaTeX']}</p>
-                    <div class="options-grid">
-                        ${[1,2,3,4,5].map(n => `<button class="opt-btn" onclick="checkChoice(this, '${n}', '${p['答案']}')">選項 (${n})</button>`).join('')}
-                    </div>
-                `;
-                area.appendChild(card);
-            });
-            renderMathInElement(area, { delimiters: [{left: "$", right: "$", display: false}] });
-        }
-
-        function checkChoice(btn, chosen, correct) {
-            if(chosen === correct.replace(/[^0-9]/g, '')) {
-                btn.classList.add('correct');
-            } else {
-                btn.style.background = '#ff7675';
-                setTimeout(() => btn.style.background = '#fff', 500);
-            }
-        }
-
-        // 專注與計時邏輯 (簡化版)
-        let timer;
-        let timeLeft = 1500;
-        function toggleFocus() {
-            const btn = document.getElementById('focus-ctrl');
-            if(btn.innerText === "開始專注") {
-                btn.innerText = "棄賽";
-                timer = setInterval(() => {
-                    timeLeft--;
-                    const m = Math.floor(timeLeft / 60);
-                    const s = timeLeft % 60;
-                    document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                    if(timeLeft <= 0) {
-                        clearInterval(timer);
-                        stoneCount++;
-                        alert("專注達成！石材 +1");
-                        location.reload(); // 暫時重整以更新數值
-                    }
-                }, 1000);
-            }
-        }
-
-        init();
-    </script>
-</body>
-</html>
+        stoneCount--;
+        document.getElementById('stone-val').innerText = stoneCount;
+        
+        const scene = document.getElementById('iso-scene');
+        const houseImg = document.createElement('img');
+        
+        // 這裡換成你上傳到 GitHub images 資料夾的圖片網址
+        // 或者是我們測試用的這張小房子
+        houseImg.src = 'https://cdn-icons-png.flaticon.com/512/619/619153.png'; 
+        houseImg.className = 'building';
+        
+        // 隨機計算格子位置 (8x8)
+        const gridX = Math.floor(Math.random() * 8);
+        const gridY = Math.floor(Math.random() * 8);
+        
+        const posX = gridX * 40 + 20;
+        const posY = gridY * 40 + 20;
+        
+        houseImg.style.left = posX + 'px';
+        houseImg.style.top = posY + 'px';
+        
+        scene.appendChild(houseImg);
+    }
+</script>
