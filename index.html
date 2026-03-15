@@ -1,51 +1,307 @@
-<style>
-    /* ... 保留之前的 CSS ... */
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方紋衫數學 2.0 | RunningMath_33</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 
-    /* 💡 建築物樣式修正：從方塊改為圖片 */
-    .building { 
-        position: absolute; 
-        width: 60px;  /* 稍微大一點比較好點擊 */
-        height: auto; 
-        /* 關鍵：等距視角的圖片需要微調位置，讓底部對準格子 */
-        transform: translate(-50%, -100%) rotateZ(-45deg) rotateX(-60deg); 
-        transform-origin: bottom center;
-        filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.2));
-        pointer-events: none; /* 讓圖片不影響點擊底下的格子 */
-        z-index: 10;
-    }
-</style>
-
-<script>
-    // ... 保留之前的 init 與其他邏輯 ...
-
-    // 💡 修正後的蓋房子函數
-    function buildHouse() {
-        if(stoneCount < 1) { 
-            alert("石材不足！請先開始專注採集。"); 
-            return; 
+    <style>
+        :root { 
+            --sidebar-width: 300px; 
+            --primary-bg: #111;
+            --accent-color: #3498db; 
+            --card-bg: #ffffff;
+            --iso-grid-size: 40px;
         }
+
+        /* 內容保護：禁止選取、禁用右鍵 */
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            margin: 0; display: flex; height: 100vh; background-color: #f8f9fa;
+            -webkit-user-select: none; user-select: none; overflow: hidden;
+        }
+
+        /* 側邊欄：左上角點擊回首頁 */
+        #sidebar { width: var(--sidebar-width); background: var(--primary-bg); color: white; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.3); }
+        .sidebar-header { 
+            padding: 40px 20px; text-align: center; border-bottom: 1px solid #333; 
+            cursor: pointer; transition: 0.3s; background: linear-gradient(to bottom, #222, #111);
+        }
+        .sidebar-header:hover { background: #222; }
+        .sidebar-header h2 { margin: 0; font-size: 1.3rem; color: var(--accent-color); letter-spacing: 1px; }
+
+        .unit-list { flex-grow: 1; overflow-y: auto; }
+        .unit-group { border-bottom: 1px solid #222; }
+        .unit-title { padding: 18px 25px; cursor: pointer; display: flex; justify-content: space-between; font-size: 0.95rem; color: #eee; }
+        .sub-item-list { display: none; background: #050505; }
+        .sub-item { padding: 12px 45px; font-size: 0.85rem; color: #666; cursor: pointer; transition: 0.2s; }
+        .sub-item:hover { color: var(--accent-color); background: #111; }
+
+        /* 主內容 */
+        #main-content { flex-grow: 1; padding: 50px; overflow-y: auto; scroll-behavior: smooth; position: relative; }
+        .section-title { font-size: 1.6rem; margin-bottom: 30px; border-left: 6px solid var(--accent-color); padding-left: 18px; color: #2c3e50; font-weight: 700; }
+        .card { background: var(--card-bg); padding: 35px; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); margin-bottom: 35px; border: 1px solid #eee; }
+
+        /* 🏰 等距視角地圖 (Isometric Map) */
+        #map-container { 
+            width: 100%; height: 380px; background: #96c93d; border-radius: 20px; 
+            overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 40px; border: 5px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .iso-scene { 
+            position: relative; width: 320px; height: 320px;
+            transform: rotateX(60deg) rotateZ(45deg); 
+            transform-style: preserve-3d;
+        }
+        .iso-grid { 
+            display: grid; grid-template-columns: repeat(8, var(--iso-grid-size)); 
+            grid-template-rows: repeat(8, var(--iso-grid-size));
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .iso-tile { width: var(--iso-grid-size); height: var(--iso-grid-size); border: 0.5px solid rgba(255,255,255,0.1); }
         
-        stoneCount--;
-        document.getElementById('stone-val').innerText = stoneCount;
-        
-        const scene = document.getElementById('iso-scene');
-        const houseImg = document.createElement('img');
-        
-        // 這裡換成你上傳到 GitHub images 資料夾的圖片網址
-        // 或者是我們測試用的這張小房子
-        houseImg.src = 'https://cdn-icons-png.flaticon.com/512/619/619153.png'; 
-        houseImg.className = 'building';
-        
-        // 隨機計算格子位置 (8x8)
-        const gridX = Math.floor(Math.random() * 8);
-        const gridY = Math.floor(Math.random() * 8);
-        
-        const posX = gridX * 40 + 20;
-        const posY = gridY * 40 + 20;
-        
-        houseImg.style.left = posX + 'px';
-        houseImg.style.top = posY + 'px';
-        
-        scene.appendChild(houseImg);
-    }
-</script>
+        /* 建築物圖片樣式 */
+        .building { 
+            position: absolute; width: 60px; height: auto; 
+            transform: translate(-50%, -100%) rotateZ(-45deg) rotateX(-60deg); 
+            transform-origin: bottom center;
+            filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.2));
+            pointer-events: none; z-index: 10;
+        }
+
+        /* 專注計時器 (右上角) */
+        #focus-timer-box { 
+            position: fixed; top: 25px; right: 25px; background: #fff; padding: 12px 25px; 
+            border-radius: 50px; display: flex; align-items: center; gap: 15px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1); z-index: 1000; border: 2px solid var(--accent-color); 
+        }
+        .btn-focus { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+
+        /* 累積人氣 (右下角) */
+        #visitor-counter { 
+            position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); 
+            padding: 8px 18px; border-radius: 30px; color: white; font-size: 12px; 
+            transition: 0.3s; z-index: 1001; 
+        }
+        #visitor-counter:hover { background: rgba(0,0,0,0.9); }
+
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 25px; }
+        .opt-btn { padding: 18px; border: 2px solid #f1f3f5; border-radius: 12px; cursor: pointer; background: #fff; font-size: 1.05rem; }
+        .opt-btn.correct { background: #27ae60 !important; color: white; border-color: #27ae60; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="focus-timer-box">
+        ⏳ <span id="timer-display" style="font-weight:bold; font-size:1.2rem;">25:00</span>
+        <button class="btn-focus" id="focus-ctrl" onclick="toggleFocus()">開始專注</button>
+    </div>
+
+    <nav id="sidebar">
+        <div class="sidebar-header" onclick="showHome()">
+            <h2>RunningMath_33</h2>
+            <small style="opacity:0.6; color:#3498db;">方紋衫數學 2.0</small>
+        </div>
+        <div class="unit-list" id="unit-list"></div>
+    </nav>
+
+    <main id="main-content">
+        <div id="display-area"></div>
+    </main>
+
+    <div id="visitor-counter">
+        累積人氣：
+        <img src="https://hits.dwyl.com/plaidfunction1010/RM_33.svg" alt="Hits" style="vertical-align: middle;">
+    </div>
+
+    <script>
+        // 資料庫 CSV 連結
+        const sheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJbN35V8s8IEgl2N1EjFa65gvHLlTxmHJgOn-JA55isj9v5ka-VqWbHT2cy435g5d85S6BneVtE1fk/pub?output=csv'; 
+        let allData = [];
+        let stoneCount = 0; // 石材數量
+
+        async function init() {
+            Papa.parse(sheetCsvUrl, {
+                download: true, header: true,
+                complete: function(results) {
+                    allData = results.data.filter(r => r['單元名稱']);
+                    
+                    // 自動排序：按單元數字排序 (9 號會在 18 號前面)
+                    allData.sort((a, b) => {
+                        const numA = parseInt(a['單元名稱'].match(/\d+/)) || 0;
+                        const numB = parseInt(b['單元名稱'].match(/\d+/)) || 0;
+                        return numA - numB;
+                    });
+
+                    renderSidebar();
+                    showHome();
+                }
+            });
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('unit-list');
+            const unitMap = {};
+            allData.forEach(p => {
+                const u = p['單元名稱'];
+                const sub = p['主題'] || '核心概念';
+                if (!unitMap[u]) unitMap[u] = new Set();
+                unitMap[u].add(sub);
+            });
+            container.innerHTML = Object.keys(unitMap).map(unit => `
+                <div class="unit-group">
+                    <div class="unit-title" onclick="toggleSubMenu(this)">${unit} <span>▸</span></div>
+                    <div class="sub-item-list">
+                        ${Array.from(unitMap[unit]).map(sub => `<div class="sub-item" onclick="loadContent('${unit}', '${sub}')">${sub}</div>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleSubMenu(el) {
+            const sub = el.nextElementSibling;
+            const arrow = el.querySelector('span');
+            const isOpen = sub.style.display === 'block';
+            sub.style.display = isOpen ? 'none' : 'block';
+            arrow.innerHTML = isOpen ? '▸' : '▾';
+        }
+
+        function showHome() {
+            const area = document.getElementById('display-area');
+            const newest = [...allData].sort((a, b) => new Date(b['新增日期']) - new Date(a['新增日期'])).slice(0, 3);
+
+            area.innerHTML = `
+                <h1 class="section-title">你好, plaidfunction1010</h1>
+                <p>目前的資源：💎 神聖石材 x <span id="stone-val" style="font-weight:bold; color:var(--accent-color);">${stoneCount}</span></p>
+                
+                <div id="map-container">
+                    <div class="iso-scene" id="iso-scene">
+                        <div class="iso-grid">
+                            ${Array(64).fill('<div class="iso-tile"></div>').join('')}
+                        </div>
+                    </div>
+                    <div style="position:absolute; bottom:20px; right:20px;">
+                        <button class="btn-focus" onclick="buildHouse()" style="background:#27ae60; box-shadow:0 4px 10px rgba(0,0,0,0.2);">蓋一間房子 (-1 石材)</button>
+                    </div>
+                </div>
+
+                <div class="section-title">✨ 最新更新題目</div>
+                <div style="display:grid; gap:15px; margin-bottom:40px;">
+                    ${newest.map(p => `
+                        <div class="card" onclick="loadContent('${p['單元名稱']}', '${p['主題']}')" style="cursor:pointer; padding:20px; display:flex; justify-content:space-between; align-items:center; border-left:5px solid var(--accent-color);">
+                            <div><b>[${p['單元名稱']}]</b> ${p['主題']} - ${p['題目ID']}</div>
+                            <small style="color:#999;">${p['新增日期']}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function buildHouse() {
+            if(stoneCount < 1) { alert("石材不足！請先完成一次專注模式。"); return; }
+            stoneCount--;
+            document.getElementById('stone-val').innerText = stoneCount;
+            
+            const scene = document.getElementById('iso-scene');
+            const houseImg = document.createElement('img');
+            
+            // 測試用像素房子，未來可更換為你在 GitHub images 中的連結
+            houseImg.src = 'https://cdn-icons-png.flaticon.com/512/619/619153.png'; 
+            houseImg.className = 'building';
+            
+            // 隨機在 8x8 格子中選擇位置
+            const posX = Math.floor(Math.random() * 8) * 40 + 20;
+            const posY = Math.floor(Math.random() * 8) * 40 + 20;
+            
+            houseImg.style.left = posX + 'px';
+            houseImg.style.top = posY + 'px';
+            scene.appendChild(houseImg);
+        }
+
+        function loadContent(unitName, subName) {
+            const area = document.getElementById('display-area');
+            const problems = allData.filter(d => d['單元名稱'] === unitName && (d['主題'] || '核心概念') === subName);
+            
+            area.innerHTML = `<h1 class="section-title">${unitName} > ${subName}</h1>`;
+            
+            problems.forEach((p, idx) => {
+                const raw = p['題目內容，可輸入 LaTeX'] || '';
+                const img = p['圖片網址'] || '';
+                const qBody = raw.split(/\(\d\)/)[0];
+                const opts = raw.match(/\(\d\)[^(]*/g) || [];
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div style="color:#bbb; font-size:0.75rem; margin-bottom:15px;">Unique ID: ${p['題目ID']}</div>
+                    ${img ? `<img src="${img}" class="problem-img">` : ''}
+                    <div class="problem-text">${qBody}</div>
+                    <div class="options-grid">
+                        ${opts.map(o => {
+                            const n = o.match(/\((\d)\)/)[1];
+                            return `<div class="opt-btn" onclick="checkChoice(this, '${n}', '${p['答案']}')">${o}</div>`;
+                        }).join('')}
+                    </div>
+                `;
+                area.appendChild(card);
+            });
+            renderMathInElement(area, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}, {left: "\\(", right: "\\)", display: false}], throwOnError: false });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function checkChoice(btn, chosen, correct) {
+            const ans = correct.replace(/[^0-9]/g, '');
+            if(chosen === ans) {
+                btn.classList.add('correct');
+                // 這裡未來可以加入「答對題數」累積獎勵
+            } else {
+                btn.style.background = '#ff7675';
+                btn.style.color = '#fff';
+                setTimeout(() => { btn.style.background = '#fff'; btn.style.color = '#000'; }, 500);
+            }
+        }
+
+        let timer;
+        let timeLeft = 1500;
+        function toggleFocus() {
+            const btn = document.getElementById('focus-ctrl');
+            if(btn.innerText === "開始專注") {
+                btn.innerText = "放棄專注";
+                timer = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay();
+                    if(timeLeft <= 0) {
+                        clearInterval(timer);
+                        stoneCount++;
+                        alert("🎉 專注達成！你獲得了 1 個神聖石材！");
+                        btn.innerText = "開始專注";
+                        timeLeft = 1500;
+                        updateTimerDisplay();
+                        if(document.getElementById('stone-val')) document.getElementById('stone-val').innerText = stoneCount;
+                    }
+                }, 1000);
+            } else {
+                if(confirm("確定要放棄這段專注時間嗎？小樹會枯萎喔！")) {
+                    clearInterval(timer);
+                    btn.innerText = "開始專注";
+                    timeLeft = 1500;
+                    updateTimerDisplay();
+                }
+            }
+        }
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
